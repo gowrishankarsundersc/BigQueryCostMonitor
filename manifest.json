@@ -1,0 +1,26 @@
+{
+  "manifest_version": 2,
+
+  "name": "BigQuery Cost Limiter",
+  "description": "This extension ensures that BigQuery costs are always under check",
+  "version": "1.0",
+
+  "browser_action": {
+    "default_icon": "bq.png",
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://bigquery.cloud.google.com/*"],
+      "css": ["css/buttons-min.css", "css/jquery-ui.min.css"],
+      "js": ["js/jquery-2.1.4.min.js", "js/myscript.js", "js/jquery-ui.min.js"]
+    }
+  ],
+  "permissions": [
+    "activeTab",
+    "https://ajax.googleapis.com/",
+    "*://bigquery.cloud.google.com/*",
+    "tabs",
+    "storage"
+  ]
+}
