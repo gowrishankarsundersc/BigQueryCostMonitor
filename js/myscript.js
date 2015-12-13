@@ -1,4 +1,12 @@
-// TODO: Ensure the website version matches our expectation
+// TODO: Ensure the website version matches assumptions on the site
+
+var COST_PER_TB = 5;
+var STORAGE_LOWER_TO_HIGHER = 1024;
+
+function get_cost_limit_in_dollars() {
+  // TODO: This needs to be stored as an option and fetched each time.
+  return 1.0;
+}
 
 //http://stackoverflow.com/questions/3219758/detect-changes-in-the-dom
 var domObserverModule = (function(){
@@ -21,12 +29,16 @@ var domObserverModule = (function(){
   }
 })();
 
+function find_run_button() {
+  var button = $("#query-button-bar > .query-run").get(0);
+  return button;
+}
 
-var run_button_node = null;
 var masking_button_node = null;
 
 $(document).ready(function() {
   domObserverModule(document.getElementById('body'), hookup_cost_monitor_callback, true);
+  $(".compose-query").click();
 });
 
 function hookup_cost_monitor_callback(mutation) {
@@ -47,36 +59,37 @@ function hookup_cost_monitor_callback(mutation) {
     return false;
   }
 
-  // Trigger a click on the validator to ensure the validations are always visible to the user
+  // Trigger a click on the validator to ensure the query validations and costs are always visible to the user
   $("#query-validator > #validator-indicator").click();
 
-  run_button_node = $("#query-button-bar > .query-run").get(0);
+  $(find_run_button()).click(function() {
+    console.log('Query button has been clicked');
+  });
 
   setup_masking_button(query_builder_node);
-  //domObserverModule(run_button_node, position_masking_callback, false);
-
-  $(run_button_node).click(function(event) {
-    alert("On-Click works!");
-  });
+  domObserverModule(find_run_button(), position_masking_callback, false);
 
   //Disconnect the observer
   return true;
 }
 
 function setup_masking_button(query_builder_node) {
+
   masking_button_node = $("<div id='monitoring_mask' style='background-color: transparent;'>  </div>");
   $(query_builder_node).append(masking_button_node);
   $(masking_button_node).click(function() {
-    console.log("Overlay button clicked");
+    validate_query_cost();
   });
   position_masking_overlay();
 }
 
 function position_masking_callback(mutation) {
+  var x = mutation;
   position_masking_overlay();
 }
 
 function position_masking_overlay() {
+  var run_button_node = find_run_button();
   var rect = run_button_node.getBoundingClientRect();
   console.log(rect.top, rect.right, rect.bottom, rect.left);
   console.log($(run_button_node).height() + " : " + $(run_button_node).width());
@@ -96,13 +109,41 @@ function position_masking_overlay() {
   return false;
 }
 
-function alert_query_cost() {
-  var query_validation_info = $("#validate-status-box.query-validate-status-text").html();
-  var regex = "This query will process ([0-9]*[\.[0-9]+]?) ([T|G|M|K]?B) when run\.";
+function get_query_cost() {
+  var query_validation_info = $("#validate-status-box > .query-validate-status-text").html();
+  var regex = /^This query will process ([0-9]*[\.[0-9]+]?) ([T|G|M|K]?B) when run\.$/g;
 
-  matches = regex.exec(query_validation_info);
-  if (matches.length == 2) {
-    alert (matches[1] + " : " + matches[2]);
+  var matches = regex.exec(query_validation_info);
+  var cost = 0;
+  if (matches && matches.length == 3) {
+    var raw_data_count = parseFloat(matches[1]);
+    switch(matches[2]) {
+      case "KB":
+        raw_data_count /= STORAGE_LOWER_TO_HIGHER;
+      case "MB":
+        raw_data_count /= STORAGE_LOWER_TO_HIGHER;
+      case "GB":
+        raw_data_count /= STORAGE_LOWER_TO_HIGHER;
+    }
+    return (raw_data_count * COST_PER_TB).toFixed(2);
+  } else {
+    return null;
+  }
+}
+
+function validate_query_cost() {
+  var query_cost = get_query_cost();
+  if (query_cost == null) {
+    console.log("Could not fetch the cost of the query. So, skipping validation");
+    $(find_run_button()).click();
+  }
+
+  var cost_limit = get_cost_limit_in_dollars();
+  if (query_cost > cost_limit) {
+    alert("Query costs $" + query_cost + " which is more than the limit of $" + cost_limit);
+  } else {
+    console.log("Query cost is $" + query_cost);
+    $(find_run_button()).click();
   }
 
   return true;
