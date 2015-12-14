@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>BigQueryCostMonitor Options</title>
+    <script type="text/javascript" src="js/jquery-2.1.4.min.js"></script>
+    <script type="text/javascript" src="js/simple-slider.min.js"></script>
+    <script type="text/javascript" src="js/options.js"></script>
+
+    <link type="text/css" rel="stylesheet" href="css/simple-slider-volume.css" />
+    <link type="text/css" rel="stylesheet" href="css/label.min.css" />
+    <link type="text/css" rel="stylesheet" href="css/button.min.css" />
+    <style type="text/css">
+        #options {
+            position: absolute;
+            top: 50%;
+            left: 40%;
+            height: 60%;
+            width: 50%;
+        }
+
+        #values {
+            position: absolute;
+            left: 12%;
+        }
+
+        #slider-slider {
+            position: absolute;
+            top: 10%;
+        }
+
+        #save {
+            position: absolute;
+            top: 30%;
+            left: 10%;
+        }
+
+        #clear {
+            position: absolute;
+            top: 30%;
+            left: 25%;
+        }
+    </style>
+</head>
+<body>
+    <div id="options">
+        <div id="values">
+            <label id="cost" class="ui label"></label>
+            <label id="data" class="ui label"></label>
+        </div>
+        <br/>
+        <input id="slider" type="text" />
+        <button id="save" class="ui primary button"> Save </button>
+        <button id="clear" class="ui button"> Clear </button>
+    </div>
+</body>
+</html>

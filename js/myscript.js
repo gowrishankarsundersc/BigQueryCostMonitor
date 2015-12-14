@@ -5,7 +5,7 @@ var STORAGE_LOWER_TO_HIGHER = 1024;
 
 function get_cost_limit_in_dollars() {
   // TODO: This needs to be stored as an option and fetched each time.
-  return 1.0;
+  return localStorage["bq_limit"];
 }
 
 //http://stackoverflow.com/questions/3219758/detect-changes-in-the-dom
@@ -29,14 +29,28 @@ var domObserverModule = (function(){
   }
 })();
 
+
+//The RUN QUERY button
 function find_run_button() {
-  var button = $("#query-button-bar > .query-run").get(0);
-  return button;
+  return $("#query-button-bar > .query-run").get(0);
+}
+
+// The text box containing information on the query costs/validation
+function get_query_validation_text_node() {
+  return $("#validate-status-box > .query-validate-status-text").get(0);
+}
+
+// Shamelessly ripped off from http://stackoverflow.com/questions/7128675/from-green-to-red-color-depend-on-percentage
+function getColor(value){
+  //value from 0 to 1
+  var hue=((1-value)*120).toString(10);
+  return ["hsl(",hue,",100%,50%)"].join("");
 }
 
 var masking_button_node = null;
 
 $(document).ready(function() {
+  alert("limit: " + get_cost_limit_in_dollars());
   domObserverModule(document.getElementById('body'), hookup_cost_monitor_callback, true);
   $(".compose-query").click();
 });
@@ -68,13 +82,13 @@ function hookup_cost_monitor_callback(mutation) {
 
   setup_masking_button(query_builder_node);
   domObserverModule(find_run_button(), position_masking_callback, false);
+  domObserverModule(get_query_validation_text_node(), validation_callback, true);
 
   //Disconnect the observer
   return true;
 }
 
 function setup_masking_button(query_builder_node) {
-
   masking_button_node = $("<div id='monitoring_mask' style='background-color: transparent;'>  </div>");
   $(query_builder_node).append(masking_button_node);
   $(masking_button_node).click(function() {
@@ -109,8 +123,29 @@ function position_masking_overlay() {
   return false;
 }
 
+function validation_callback(mutation) {
+  console.log("Validation changed");
+  console.dir(mutation);
+
+  var query_cost = get_query_cost();
+  var badgeText = "N/A";
+
+  if (query_cost) {
+    badgeText = "$" + (query_cost >= 10 ? Math.ceil(query_cost) : query_cost);
+  } else {
+    // Set color values alone here
+  }
+
+  //chrome.runtime.sendMessage({query_status: {text: badgeText}}, function(response) {
+  //  console.log(response.received);
+  //});
+
+  // We never want to disconnect
+  return false;
+}
+
 function get_query_cost() {
-  var query_validation_info = $("#validate-status-box > .query-validate-status-text").html();
+  var query_validation_info = $(get_query_validation_text_node()).html();
   var regex = /^This query will process ([0-9]*[\.[0-9]+]?) ([T|G|M|K]?B) when run\.$/g;
 
   var matches = regex.exec(query_validation_info);

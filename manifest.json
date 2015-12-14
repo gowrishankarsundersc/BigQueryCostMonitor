@@ -12,15 +12,15 @@
   "content_scripts": [
     {
       "matches": ["*://bigquery.cloud.google.com/*"],
-      "css": ["css/buttons-min.css", "css/jquery-ui.min.css"],
-      "js": ["js/jquery-2.1.4.min.js", "js/myscript.js", "js/jquery-ui.min.js"]
+      "js": ["js/jquery-2.1.4.min.js", "js/myscript.js"]
     }
   ],
+  "options_page": "options.html",
   "permissions": [
+    "storage",
     "activeTab",
     "https://ajax.googleapis.com/",
     "*://bigquery.cloud.google.com/*",
-    "tabs",
-    "storage"
+    "tabs"
   ]
 }
