@@ -2,10 +2,14 @@
 
 var COST_PER_TB = 5;
 var STORAGE_LOWER_TO_HIGHER = 1024;
+var COST_LIMIT = 5;
 
-function get_cost_limit_in_dollars() {
+function setup_cost_limit_in_dollars() {
   // TODO: This needs to be stored as an option and fetched each time.
-  return localStorage["bq_limit"];
+  chrome.runtime.sendMessage({bq_limit: true}, function(response) {
+    COST_LIMIT = response.bq_limit;
+    console.log("Cost limit set to $" + COST_LIMIT);
+  });
 }
 
 //http://stackoverflow.com/questions/3219758/detect-changes-in-the-dom
@@ -40,17 +44,10 @@ function get_query_validation_text_node() {
   return $("#validate-status-box > .query-validate-status-text").get(0);
 }
 
-// Shamelessly ripped off from http://stackoverflow.com/questions/7128675/from-green-to-red-color-depend-on-percentage
-function getColor(value){
-  //value from 0 to 1
-  var hue=((1-value)*120).toString(10);
-  return ["hsl(",hue,",100%,50%)"].join("");
-}
-
 var masking_button_node = null;
 
 $(document).ready(function() {
-  alert("limit: " + get_cost_limit_in_dollars());
+  setup_cost_limit_in_dollars();
   domObserverModule(document.getElementById('body'), hookup_cost_monitor_callback, true);
   $(".compose-query").click();
 });
@@ -77,22 +74,22 @@ function hookup_cost_monitor_callback(mutation) {
   $("#query-validator > #validator-indicator").click();
 
   $(find_run_button()).click(function() {
+    // TODO: This does not trigger the Query - needs to be fixed
     console.log('Query button has been clicked');
   });
 
   setup_masking_button(query_builder_node);
-  domObserverModule(find_run_button(), position_masking_callback, false);
-  domObserverModule(get_query_validation_text_node(), validation_callback, true);
+  //domObserverModule(find_run_button(), position_masking_callback, false);
 
   //Disconnect the observer
   return true;
 }
 
 function setup_masking_button(query_builder_node) {
-  masking_button_node = $("<div id='monitoring_mask' style='background-color: transparent;'>  </div>");
+  masking_button_node = $("<div id='monitoring_mask' style='background-color: transparent;'> </div>");
   $(query_builder_node).append(masking_button_node);
   $(masking_button_node).click(function() {
-    validate_query_cost();
+    setTimeout(validate_and_run_query, 1000);
   });
   position_masking_overlay();
 }
@@ -106,39 +103,12 @@ function position_masking_overlay() {
   var run_button_node = find_run_button();
   var rect = run_button_node.getBoundingClientRect();
   console.log(rect.top, rect.right, rect.bottom, rect.left);
-  console.log($(run_button_node).height() + " : " + $(run_button_node).width());
-
-  $(masking_button_node).position({
-    my: "left top",
-    at: "left top",
-    of: $(run_button_node)
-  });
 
   $(masking_button_node).height($(run_button_node).outerHeight());
   $(masking_button_node).width($(run_button_node).outerWidth());
 
-  $(masking_button_node);
-
-  // We never want to disconnect
-  return false;
-}
-
-function validation_callback(mutation) {
-  console.log("Validation changed");
-  console.dir(mutation);
-
-  var query_cost = get_query_cost();
-  var badgeText = "N/A";
-
-  if (query_cost) {
-    badgeText = "$" + (query_cost >= 10 ? Math.ceil(query_cost) : query_cost);
-  } else {
-    // Set color values alone here
-  }
-
-  //chrome.runtime.sendMessage({query_status: {text: badgeText}}, function(response) {
-  //  console.log(response.received);
-  //});
+  var run_button_position = $(run_button_node).position();
+  $(masking_button_node).css({top: run_button_position.top, left: run_button_position.left, position: 'absolute'});
 
   // We never want to disconnect
   return false;
@@ -166,20 +136,26 @@ function get_query_cost() {
   }
 }
 
-function validate_query_cost() {
+function validate_and_run_query() {
   var query_cost = get_query_cost();
   if (query_cost == null) {
     console.log("Could not fetch the cost of the query. So, skipping validation");
     $(find_run_button()).click();
   }
 
-  var cost_limit = get_cost_limit_in_dollars();
+  var cost_limit = COST_LIMIT;
+  var ratio = Math.min(1, query_cost/cost_limit);
+  chrome.runtime.sendMessage({cost: query_cost, ratio: ratio}, function(response) {});
   if (query_cost > cost_limit) {
-    alert("Query costs $" + query_cost + " which is more than the limit of $" + cost_limit);
-  } else {
-    console.log("Query cost is $" + query_cost);
-    $(find_run_button()).click();
+    if(confirm("Query costs $" + query_cost + " which is more than the limit of $" + cost_limit +
+        ". Sure you want to go ahead?") == true) {
+      console.log("Query cost is $" + query_cost);
+      $(find_run_button()).click();
+    } else {
+      console.log("Cost exceeds limit - so skipping the query");
+    }
   }
+
 
   return true;
 }

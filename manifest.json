@@ -15,12 +15,14 @@
       "js": ["js/jquery-2.1.4.min.js", "js/myscript.js"]
     }
   ],
+  "background": {
+    "scripts": ["js/background.js"]
+  },
   "options_page": "options.html",
   "permissions": [
     "storage",
-    "activeTab",
+    "tabs",
     "https://ajax.googleapis.com/",
-    "*://bigquery.cloud.google.com/*",
-    "tabs"
+    "*://bigquery.cloud.google.com/*"
   ]
 }
